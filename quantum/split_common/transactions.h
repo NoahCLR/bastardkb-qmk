@@ -62,3 +62,21 @@ void split_activity_sync_sent(bool success);
 #ifdef SPLIT_TRANSACTION_DIAGNOSTICS
 void split_transaction_diagnostic(uint8_t id, uint8_t request_bytes, uint8_t response_bytes, uint32_t elapsed_us, bool success);
 #endif
+
+// Optional frame CRC on the serial transport (SPLIT_TRANSPORT_CRC): every data
+// frame carries a CRC8 over its transaction id and bytes; a bad write is
+// dropped by the slave and reported in the next handshake, and a bad read is
+// rejected by the master.
+#define QMK_SPLIT_TRANSPORT_CRC_VERSION 1
+#ifdef SPLIT_TRANSPORT_CRC
+#    ifdef USE_I2C
+#        error "SPLIT_TRANSPORT_CRC is implemented for the serial transport only"
+#    endif
+// Master: the slave reported that transaction id's last write failed its CRC.
+void split_transaction_crc_dropped(uint8_t id);
+#    ifdef SPLIT_TRANSACTION_DIAGNOSTICS
+// A frame of transaction id failed its CRC: a write the slave dropped, or a
+// read the master rejected.
+void split_transaction_diagnostic_crc(uint8_t id);
+#    endif
+#endif

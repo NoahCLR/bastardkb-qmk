@@ -89,7 +89,46 @@
 // Forward-declare the RPC callback handlers
 void slave_rpc_info_callback(uint8_t initiator2target_buffer_size, const void *initiator2target_buffer, uint8_t target2initiator_buffer_size, void *target2initiator_buffer);
 void slave_rpc_exec_callback(uint8_t initiator2target_buffer_size, const void *initiator2target_buffer, uint8_t target2initiator_buffer_size, void *target2initiator_buffer);
+#    ifdef SPLIT_TRANSPORT_CRC
+void slave_rpc_request_callback(uint8_t initiator2target_buffer_size, const void *initiator2target_buffer, uint8_t target2initiator_buffer_size, void *target2initiator_buffer);
+#    endif
 #endif // defined(SPLIT_TRANSACTION_RPC)
+
+////////////////////////////////////////////////////
+// Frame CRC resends
+
+#ifdef SPLIT_TRANSPORT_CRC
+// A write the slave reported dropped is resent on the next scan instead of
+// waiting for the forced resend. A successful send clears it; a lost report
+// falls back to the forced resend.
+static bool resend_due[NUM_TOTAL_TRANSACTIONS];
+
+void split_transaction_crc_dropped(uint8_t id) {
+    if (id < NUM_TOTAL_TRANSACTIONS) {
+        resend_due[id] = true;
+    }
+#    ifdef SPLIT_TRANSACTION_DIAGNOSTICS
+    split_transaction_diagnostic_crc(id);
+#    endif
+}
+
+static inline bool split_resend_due(int8_t id) {
+    return resend_due[id];
+}
+
+static inline void split_resend_done(int8_t id) {
+    resend_due[id] = false;
+}
+#else
+static inline bool split_resend_due(int8_t id) {
+    (void)id;
+    return false;
+}
+
+static inline void split_resend_done(int8_t id) {
+    (void)id;
+}
+#endif // SPLIT_TRANSPORT_CRC
 
 ////////////////////////////////////////////////////
 // Helpers
@@ -158,10 +197,11 @@ inline static bool read_if_checksum_mismatch(int8_t trans_id_checksum, int8_t tr
 
 inline static bool send_if_condition(int8_t trans_id, uint32_t *last_update, bool condition, void *source, size_t length) {
     bool okay = true;
-    if (timer_elapsed32(*last_update) >= FORCED_SYNC_THROTTLE_MS || condition) {
+    if (timer_elapsed32(*last_update) >= FORCED_SYNC_THROTTLE_MS || condition || split_resend_due(trans_id)) {
         okay &= transport_write(trans_id, source, length);
         if (okay) {
             *last_update = timer_read32();
+            split_resend_done(trans_id);
         }
     }
     return okay;
@@ -297,11 +337,12 @@ static bool sync_timer_handlers_master(matrix_row_t master_matrix[], matrix_row_
     static uint32_t last_update = 0;
 
     bool okay = true;
-    if (timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS) {
+    if (timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS || split_resend_due(PUT_SYNC_TIMER)) {
         uint32_t sync_timer = sync_timer_read32() + SYNC_TIMER_OFFSET;
         okay &= transport_write(PUT_SYNC_TIMER, &sync_timer, sizeof(sync_timer));
         if (okay) {
             last_update = timer_read32();
+            split_resend_done(PUT_SYNC_TIMER);
         }
     }
     return okay;
@@ -399,7 +440,7 @@ static void led_state_handlers_slave(matrix_row_t master_matrix[], matrix_row_t 
 
 static bool mods_handlers_master(matrix_row_t master_matrix[], matrix_row_t slave_matrix[]) {
     static uint32_t   last_update    = 0;
-    bool              mods_need_sync = timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS;
+    bool              mods_need_sync = timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS || split_resend_due(PUT_MODS);
     split_mods_sync_t new_mods;
     new_mods.real_mods = get_mods();
     if (!mods_need_sync && new_mods.real_mods != split_shmem->mods.real_mods) {
@@ -427,6 +468,7 @@ static bool mods_handlers_master(matrix_row_t master_matrix[], matrix_row_t slav
         okay &= transport_write(PUT_MODS, &new_mods, sizeof(new_mods));
         if (okay) {
             last_update = timer_read32();
+            split_resend_done(PUT_MODS);
         }
     }
 
@@ -789,9 +831,12 @@ static void pointing_handlers_slave(matrix_row_t master_matrix[], matrix_row_t s
 
 static bool watchdog_handlers_master(matrix_row_t master_matrix[], matrix_row_t slave_matrix[]) {
     bool okay = true;
-    if (!split_watchdog_check()) {
+    if (!split_watchdog_check() || split_resend_due(PUT_WATCHDOG)) {
         okay = transport_write(PUT_WATCHDOG, &okay, sizeof(okay));
         split_watchdog_update(okay);
+        if (okay) {
+            split_resend_done(PUT_WATCHDOG);
+        }
     }
     return okay;
 }
@@ -872,7 +917,8 @@ static bool activity_handlers_master(matrix_row_t master_matrix[], matrix_row_t 
         .encoder_timestamp = last_encoder_activity_time(),
         .pointing_device_timestamp = last_pointing_device_activity_time(),
     };
-    bool force = !sent_once || !is_transport_connected() || timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS;
+    // A reported drop is a forced repair: it bypasses admission.
+    bool force = !sent_once || !is_transport_connected() || timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS || split_resend_due(PUT_ACTIVITY);
     bool changed = memcmp(&activity_sync, &last_sent, sizeof(activity_sync)) != 0;
     // Observe every snapshot, including unchanged ones, so a policy can detect
     // a quiet-to-active transition. A forced repair always bypasses admission.
@@ -883,6 +929,7 @@ static bool activity_handlers_master(matrix_row_t master_matrix[], matrix_row_t 
         last_sent = activity_sync;
         sent_once = true;
         last_update = timer_read32();
+        split_resend_done(PUT_ACTIVITY);
     }
     split_activity_sync_sent(okay);
     return okay;
@@ -968,7 +1015,11 @@ split_transaction_desc_t split_transaction_table[NUM_TOTAL_TRANSACTIONS] = {
 
 #if defined(SPLIT_TRANSACTION_RPC)
         [PUT_RPC_INFO]  = trans_initiator2target_initializer_cb(rpc_info, slave_rpc_info_callback),
+#    ifdef SPLIT_TRANSPORT_CRC
+    [PUT_RPC_REQ_DATA]  = trans_initiator2target_initializer_cb(rpc_m2s_buffer, slave_rpc_request_callback),
+#    else
     [PUT_RPC_REQ_DATA]  = trans_initiator2target_initializer(rpc_m2s_buffer),
+#    endif
     [EXECUTE_RPC]       = trans_initiator2target_initializer_cb(rpc_info.payload.transaction_id, slave_rpc_exec_callback),
     [GET_RPC_RESP_DATA] = trans_target2initiator_initializer(rpc_s2m_buffer),
 #endif // defined(SPLIT_TRANSACTION_RPC)
@@ -1055,20 +1106,39 @@ bool transaction_rpc_exec(int8_t transaction_id, uint8_t initiator2target_buffer
     // * send the request data
     // * execute RPC callback
     // * retrieve the response data
+    // With the frame CRC, each step's handshake reports whether the previous
+    // step's data was dropped; the sequence stops there and the caller retries.
+    // A report in the info step's own handshake is about the write before this
+    // sequence, so the step flags are cleared after it.
     if (!transport_write(PUT_RPC_INFO, &info, sizeof(info))) {
         return false;
     }
-    if (!transport_write(PUT_RPC_REQ_DATA, initiator2target_buffer, initiator2target_buffer_size)) {
+    split_resend_done(PUT_RPC_INFO);
+    split_resend_done(PUT_RPC_REQ_DATA);
+    split_resend_done(EXECUTE_RPC);
+    if (!transport_write(PUT_RPC_REQ_DATA, initiator2target_buffer, initiator2target_buffer_size) || split_resend_due(PUT_RPC_INFO)) {
         return false;
     }
-    if (!transport_write(EXECUTE_RPC, &transaction_id, sizeof(transaction_id))) {
+    if (!transport_write(EXECUTE_RPC, &transaction_id, sizeof(transaction_id)) || split_resend_due(PUT_RPC_REQ_DATA)) {
         return false;
     }
-    if (!transport_read(GET_RPC_RESP_DATA, target2initiator_buffer, target2initiator_buffer_size)) {
+    if (!transport_read(GET_RPC_RESP_DATA, target2initiator_buffer, target2initiator_buffer_size) || split_resend_due(EXECUTE_RPC)) {
         return false;
     }
     return true;
 }
+
+#    ifdef SPLIT_TRANSPORT_CRC
+// The slave runs a callback only for an execute that follows a checked info
+// and request data of the same sequence. A dropped frame never reaches its
+// callback, so a stale or partial sequence stops here instead of running the
+// callback on the previous payload.
+static enum { RPC_SEQUENCE_IDLE, RPC_SEQUENCE_INFO, RPC_SEQUENCE_REQUEST } rpc_sequence = RPC_SEQUENCE_IDLE;
+
+void slave_rpc_request_callback(uint8_t initiator2target_buffer_size, const void *initiator2target_buffer, uint8_t target2initiator_buffer_size, void *target2initiator_buffer) {
+    rpc_sequence = rpc_sequence == RPC_SEQUENCE_INFO ? RPC_SEQUENCE_REQUEST : RPC_SEQUENCE_IDLE;
+}
+#    endif
 
 void slave_rpc_info_callback(uint8_t initiator2target_buffer_size, const void *initiator2target_buffer, uint8_t target2initiator_buffer_size, void *target2initiator_buffer) {
     // The RPC info block contains the intended transaction ID, as well as the sizes for both inbound and outbound data.
@@ -1077,12 +1147,25 @@ void slave_rpc_info_callback(uint8_t initiator2target_buffer_size, const void *i
 
     split_transaction_table[PUT_RPC_REQ_DATA].initiator2target_buffer_size  = split_shmem->rpc_info.payload.m2s_length;
     split_transaction_table[GET_RPC_RESP_DATA].target2initiator_buffer_size = split_shmem->rpc_info.payload.s2m_length;
+#    ifdef SPLIT_TRANSPORT_CRC
+    rpc_sequence = RPC_SEQUENCE_INFO;
+#    endif
 }
 
 void slave_rpc_exec_callback(uint8_t initiator2target_buffer_size, const void *initiator2target_buffer, uint8_t target2initiator_buffer_size, void *target2initiator_buffer) {
     // We can assume that the buffer lengths are correctly set, now, given that sequentially the rpc_info callback was already executed.
     // Go through the rpc_info and execute _that_ transaction's callback, with the scratch buffers as inputs.
     // As a safety precaution we check that the received payload matches its checksum first.
+#    ifdef SPLIT_TRANSPORT_CRC
+    // A skipped execute zeroes the reply, so the master cannot read the
+    // previous one as its answer.
+    bool sequence_complete = rpc_sequence == RPC_SEQUENCE_REQUEST;
+    rpc_sequence           = RPC_SEQUENCE_IDLE;
+    if (!sequence_complete) {
+        memset(split_shmem->rpc_s2m_buffer, 0, sizeof(split_shmem->rpc_s2m_buffer));
+        return;
+    }
+#    endif
     if (crc8(&split_shmem->rpc_info.payload, sizeof(split_shmem->rpc_info.payload)) != split_shmem->rpc_info.checksum) {
         return;
     }
