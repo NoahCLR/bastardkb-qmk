@@ -104,7 +104,17 @@ bool soft_serial_transaction(int index) {
      * Parts of failed transactions or spurious bytes could still be in it. */
     serial_transport_driver_clear();
 
+#ifdef SPLIT_TRANSACTION_DIAGNOSTICS
+    if (index < 0 || index >= NUM_TOTAL_TRANSACTIONS) return false;
+    uint32_t started = chSysGetRealtimeCounterX();
+    bool success = initiate_transaction((uint8_t)index);
+    split_transaction_desc_t *trans = &split_transaction_table[index];
+    split_transaction_diagnostic((uint8_t)index, trans->initiator2target_buffer_size, trans->target2initiator_buffer_size,
+                                 chSysGetRealtimeCounterX() - started, success);
+    return success;
+#else
     return initiate_transaction((uint8_t)index);
+#endif
 }
 
 /**

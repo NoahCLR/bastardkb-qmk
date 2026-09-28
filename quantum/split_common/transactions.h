@@ -51,3 +51,14 @@ bool transaction_rpc_exec(int8_t transaction_id, uint8_t initiator2target_buffer
 
 #define transaction_rpc_send(transaction_id, initiator2target_buffer_size, initiator2target_buffer) transaction_rpc_exec(transaction_id, initiator2target_buffer_size, initiator2target_buffer, 0, NULL)
 #define transaction_rpc_recv(transaction_id, target2initiator_buffer_size, target2initiator_buffer) transaction_rpc_exec(transaction_id, 0, NULL, target2initiator_buffer_size, target2initiator_buffer)
+
+// Optional activity admission policy. The supplied last snapshot is the last
+// successful write, never the mutable transport staging buffer.
+#define QMK_SPLIT_ACTIVITY_POLICY_VERSION 1
+#ifdef SPLIT_ACTIVITY_ENABLE
+bool split_activity_sync_should_send(const split_slave_activity_sync_t *current, const split_slave_activity_sync_t *sent, uint32_t last_success, bool sent_once, bool force);
+void split_activity_sync_sent(bool success);
+#endif
+#ifdef SPLIT_TRANSACTION_DIAGNOSTICS
+void split_transaction_diagnostic(uint8_t id, uint8_t request_bytes, uint8_t response_bytes, uint32_t elapsed_us, bool success);
+#endif

@@ -856,13 +856,36 @@ static void haptic_handlers_slave(matrix_row_t master_matrix[], matrix_row_t sla
 
 #if defined(SPLIT_ACTIVITY_ENABLE)
 
+__attribute__((weak)) bool split_activity_sync_should_send(const split_slave_activity_sync_t *current, const split_slave_activity_sync_t *sent, uint32_t last_success, bool sent_once, bool force) {
+    (void)current; (void)sent; (void)last_success; (void)sent_once; (void)force;
+    return true;
+}
+
+__attribute__((weak)) void split_activity_sync_sent(bool success) { (void)success; }
+
 static bool activity_handlers_master(matrix_row_t master_matrix[], matrix_row_t slave_matrix[]) {
-    static uint32_t             last_update = 0;
-    split_slave_activity_sync_t activity_sync;
-    activity_sync.matrix_timestamp          = last_matrix_activity_time();
-    activity_sync.encoder_timestamp         = last_encoder_activity_time();
-    activity_sync.pointing_device_timestamp = last_pointing_device_activity_time();
-    return send_if_data_mismatch(PUT_ACTIVITY, &last_update, &activity_sync, &split_shmem->activity_sync, sizeof(activity_sync));
+    static uint32_t last_update = 0;
+    static bool sent_once = false;
+    static split_slave_activity_sync_t last_sent;
+    split_slave_activity_sync_t activity_sync = {
+        .matrix_timestamp = last_matrix_activity_time(),
+        .encoder_timestamp = last_encoder_activity_time(),
+        .pointing_device_timestamp = last_pointing_device_activity_time(),
+    };
+    bool force = !sent_once || !is_transport_connected() || timer_elapsed32(last_update) >= FORCED_SYNC_THROTTLE_MS;
+    bool changed = memcmp(&activity_sync, &last_sent, sizeof(activity_sync)) != 0;
+    // Observe every snapshot, including unchanged ones, so a policy can detect
+    // a quiet-to-active transition. A forced repair always bypasses admission.
+    bool due = split_activity_sync_should_send(&activity_sync, &last_sent, last_update, sent_once, force);
+    if (!force && (!changed || !due)) return true;
+    bool okay = transport_write(PUT_ACTIVITY, &activity_sync, sizeof(activity_sync));
+    if (okay) {
+        last_sent = activity_sync;
+        sent_once = true;
+        last_update = timer_read32();
+    }
+    split_activity_sync_sent(okay);
+    return okay;
 }
 
 static void activity_handlers_slave(matrix_row_t master_matrix[], matrix_row_t slave_matrix[]) {
