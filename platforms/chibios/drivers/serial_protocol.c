@@ -23,15 +23,16 @@ static inline bool react_to_transaction(void);
  * without the CRC fails at the handshake. The slave sets SPLIT_CRC_DROP_BIT
  * in its answer when the previous transaction's write failed its CRC; the
  * master credits the drop to its last write. No valid id reaches either
- * bit. */
+ * bit. The drop bit itself is unchecked: a bit error that sets it only
+ * causes one unneeded resend. */
 #    define SPLIT_CRC_HANDSHAKE_BIT 0x40
 #    define SPLIT_CRC_DROP_BIT 0x80
 _Static_assert(NUM_TOTAL_TRANSACTIONS <= 0x20, "split handshake bits overlap transaction ids");
 
-/* One frame at a time on either half: [id, payload, crc8]. */
-static uint8_t crc_frame[1 + sizeof(split_shared_memory_t) + 1];
-
-typedef enum { FRAME_OK, FRAME_FAILED, FRAME_BAD_CRC } frame_result_t;
+/* One frame at a time on either half: [id, payload, crc8]. transactions.c
+ * checks every table entry against SPLIT_TRANSPORT_CRC_MAX_FRAME at compile
+ * time; the runtime check covers RPC lengths, which arrive over the wire. */
+static uint8_t crc_frame[1 + SPLIT_TRANSPORT_CRC_MAX_FRAME + 1];
 
 /* Checksum polls carry no CRC: their content is a checksum of the data read
  * that follows a change, and that read carries one. */
@@ -49,47 +50,53 @@ static inline bool frame_has_crc(uint8_t transaction_id) {
             return true;
     }
 }
+#else
+#    define SPLIT_CRC_HANDSHAKE_BIT 0
+#    define SPLIT_CRC_DROP_BIT 0
+
+static inline bool frame_has_crc(uint8_t transaction_id) {
+    (void)transaction_id;
+    return false;
+}
+#endif
+
+typedef enum { FRAME_OK, FRAME_FAILED, FRAME_BAD_CRC } frame_result_t;
 
 static bool send_frame(uint8_t transaction_id, const uint8_t* source, size_t size) {
-    if (!frame_has_crc(transaction_id)) {
-        return serial_transport_send(source, size);
+#ifdef SPLIT_TRANSPORT_CRC
+    if (frame_has_crc(transaction_id)) {
+        if (unlikely(size > SPLIT_TRANSPORT_CRC_MAX_FRAME)) {
+            return false;
+        }
+        crc_frame[0] = transaction_id;
+        memcpy(&crc_frame[1], source, size);
+        crc_frame[1 + size] = crc8(crc_frame, 1 + size);
+        return serial_transport_send(&crc_frame[1], size + 1);
     }
-    if (unlikely(size > sizeof(crc_frame) - 2)) {
-        return false;
-    }
-    crc_frame[0] = transaction_id;
-    memcpy(&crc_frame[1], source, size);
-    crc_frame[1 + size] = crc8(crc_frame, 1 + size);
-    return serial_transport_send(&crc_frame[1], size + 1);
+#endif
+    return serial_transport_send(source, size);
 }
 
 static frame_result_t receive_frame(uint8_t transaction_id, uint8_t* destination, size_t size) {
-    if (!frame_has_crc(transaction_id)) {
-        return serial_transport_receive(destination, size) ? FRAME_OK : FRAME_FAILED;
+#ifdef SPLIT_TRANSPORT_CRC
+    if (frame_has_crc(transaction_id)) {
+        crc_frame[0] = transaction_id;
+        if (unlikely(size > SPLIT_TRANSPORT_CRC_MAX_FRAME || !serial_transport_receive(&crc_frame[1], size + 1))) {
+            return FRAME_FAILED;
+        }
+        if (unlikely(crc8(crc_frame, 1 + size) != crc_frame[1 + size])) {
+            return FRAME_BAD_CRC;
+        }
+        memcpy(destination, &crc_frame[1], size);
+        return FRAME_OK;
     }
-    if (unlikely(size > sizeof(crc_frame) - 2)) {
-        return FRAME_FAILED;
-    }
-    crc_frame[0] = transaction_id;
-    if (unlikely(!serial_transport_receive(&crc_frame[1], size + 1))) {
-        return FRAME_FAILED;
-    }
-    if (unlikely(crc8(crc_frame, 1 + size) != crc_frame[1 + size])) {
-        return FRAME_BAD_CRC;
-    }
-    memcpy(destination, &crc_frame[1], size);
-    return FRAME_OK;
+#endif
+    return serial_transport_receive(destination, size) ? FRAME_OK : FRAME_FAILED;
 }
 
 static inline uint8_t wire_size(uint8_t transaction_id, uint8_t size) {
     return size && frame_has_crc(transaction_id) ? size + 1 : size;
 }
-#else
-static inline uint8_t wire_size(uint8_t transaction_id, uint8_t size) {
-    (void)transaction_id;
-    return size;
-}
-#endif
 
 /**
  * @brief This thread runs on the slave and responds to transactions initiated
@@ -145,21 +152,25 @@ static inline bool react_to_transaction(void) {
 
     split_transaction_desc_t* transaction = &split_transaction_table[transaction_id];
 
-#ifdef SPLIT_TRANSPORT_CRC
-    /* Only the slave thread touches this. */
+    /* Only the slave thread touches this: whether the previous write failed
+     * its CRC. */
     static bool previous_write_dropped = false;
 
-    /* The handshake also reports whether the previous write was dropped. */
-    uint8_t handshake = transaction_id ^ NUM_TOTAL_TRANSACTIONS ^ SPLIT_CRC_HANDSHAKE_BIT ^ (previous_write_dropped ? SPLIT_CRC_DROP_BIT : 0);
+    /* Send back the handshake which is XORed as a simple checksum,
+     to signal that the slave is ready to receive possible transaction buffers.
+     With the frame CRC it also reports whether the previous write was dropped. */
+    uint8_t handshake      = transaction_id ^ NUM_TOTAL_TRANSACTIONS ^ SPLIT_CRC_HANDSHAKE_BIT ^ (previous_write_dropped ? SPLIT_CRC_DROP_BIT : 0);
     previous_write_dropped = false;
     if (unlikely(!serial_transport_send(&handshake, sizeof(handshake)))) {
         return false;
     }
 
-    /* Receive and check the master's frame; a bad one leaves shared memory
-     * untouched and skips the callback. A frame that failed its CRC arrived
-     * whole, so the link is still in step: returning true keeps the receive
-     * queue, which may already hold the master's next transaction id. */
+    /* Receive transaction buffer from the master. If this transaction requires it.
+     * A frame that fails its CRC leaves shared memory untouched and skips the
+     * callback. It arrived whole, so the link is still in step: returning true
+     * keeps the receive queue, which may already hold the master's next
+     * transaction id. A transaction that also returns data would then time out
+     * on the master; none does. */
     if (transaction->initiator2target_buffer_size) {
         frame_result_t result = receive_frame(transaction_id, split_trans_initiator2target_buffer(transaction), transaction->initiator2target_buffer_size);
         if (unlikely(result != FRAME_OK)) {
@@ -167,21 +178,6 @@ static inline bool react_to_transaction(void) {
             return result == FRAME_BAD_CRC;
         }
     }
-#else
-    /* Send back the handshake which is XORed as a simple checksum,
-     to signal that the slave is ready to receive possible transaction buffers  */
-    transaction_id ^= NUM_TOTAL_TRANSACTIONS;
-    if (unlikely(!serial_transport_send(&transaction_id, sizeof(transaction_id)))) {
-        return false;
-    }
-
-    /* Receive transaction buffer from the master. If this transaction requires it.*/
-    if (transaction->initiator2target_buffer_size) {
-        if (unlikely(!serial_transport_receive(split_trans_initiator2target_buffer(transaction), transaction->initiator2target_buffer_size))) {
-            return false;
-        }
-    }
-#endif
 
     /* Allow any slave processing to occur. */
     if (transaction->slave_callback) {
@@ -190,11 +186,7 @@ static inline bool react_to_transaction(void) {
 
     /* Send transaction buffer to the master. If this transaction requires it. */
     if (transaction->target2initiator_buffer_size) {
-#ifdef SPLIT_TRANSPORT_CRC
         if (unlikely(!send_frame(transaction_id, split_trans_target2initiator_buffer(transaction), transaction->target2initiator_buffer_size))) {
-#else
-        if (unlikely(!serial_transport_send(split_trans_target2initiator_buffer(transaction), transaction->target2initiator_buffer_size))) {
-#endif
             return false;
         }
     }
@@ -246,24 +238,32 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
         return false;
     }
 
-    uint8_t transaction_id_shake = 0xFF;
-
-#ifdef SPLIT_TRANSPORT_CRC
     /* Only the master's main loop touches this: the last write the slave
      * handshook, as id + 1 (0 for none), which a drop report in the next
      * handshake refers to. */
     static uint8_t last_write = 0;
     uint8_t        dropped    = last_write;
+    last_write                = 0;
 
-    last_write = 0;
+    uint8_t transaction_id_shake = 0xFF;
+
+    /* Which we always read back first so that we can error out correctly.
+     *   - due to the half duplex limitations on return codes, we always have to read *something*.
+     *   - without the read, write only transactions *always* succeed, even during the boot process where the slave is not ready.
+     */
     if (unlikely(!serial_transport_receive(&transaction_id_shake, sizeof(transaction_id_shake)) || ((transaction_id_shake & (uint8_t)~SPLIT_CRC_DROP_BIT) != (transaction_id ^ NUM_TOTAL_TRANSACTIONS ^ SPLIT_CRC_HANDSHAKE_BIT)))) {
         serial_dprintf("SPLIT: receiving handshake failed\n");
         return false;
     }
+#ifdef SPLIT_TRANSPORT_CRC
     if ((transaction_id_shake & SPLIT_CRC_DROP_BIT) && dropped) {
         split_transaction_crc_dropped(dropped - 1);
     }
+#else
+    (void)dropped;
+#endif
 
+    /* Send transaction buffer to the slave. If this transaction requires it. */
     if (transaction->initiator2target_buffer_size) {
         if (unlikely(!send_frame(transaction_id, split_trans_initiator2target_buffer(transaction), transaction->initiator2target_buffer_size))) {
             serial_dprintf("SPLIT: sending buffer failed\n");
@@ -274,44 +274,19 @@ static inline bool initiate_transaction(uint8_t transaction_id) {
         }
     }
 
+    /* Receive transaction buffer from the slave. If this transaction requires it. */
     if (transaction->target2initiator_buffer_size) {
         frame_result_t result = receive_frame(transaction_id, split_trans_target2initiator_buffer(transaction), transaction->target2initiator_buffer_size);
         if (unlikely(result != FRAME_OK)) {
-#    ifdef SPLIT_TRANSACTION_DIAGNOSTICS
+#if defined(SPLIT_TRANSPORT_CRC) && defined(SPLIT_TRANSACTION_DIAGNOSTICS)
             if (result == FRAME_BAD_CRC) {
                 split_transaction_diagnostic_crc(transaction_id);
             }
-#    endif
-            serial_dprintf("SPLIT: receiving buffer failed\n");
-            return false;
-        }
-    }
-#else
-    /* Which we always read back first so that we can error out correctly.
-     *   - due to the half duplex limitations on return codes, we always have to read *something*.
-     *   - without the read, write only transactions *always* succeed, even during the boot process where the slave is not ready.
-     */
-    if (unlikely(!serial_transport_receive(&transaction_id_shake, sizeof(transaction_id_shake)) || (transaction_id_shake != (transaction_id ^ NUM_TOTAL_TRANSACTIONS)))) {
-        serial_dprintf("SPLIT: receiving handshake failed\n");
-        return false;
-    }
-
-    /* Send transaction buffer to the slave. If this transaction requires it. */
-    if (transaction->initiator2target_buffer_size) {
-        if (unlikely(!serial_transport_send(split_trans_initiator2target_buffer(transaction), transaction->initiator2target_buffer_size))) {
-            serial_dprintf("SPLIT: sending buffer failed\n");
-            return false;
-        }
-    }
-
-    /* Receive transaction buffer from the slave. If this transaction requires it. */
-    if (transaction->target2initiator_buffer_size) {
-        if (unlikely(!serial_transport_receive(split_trans_target2initiator_buffer(transaction), transaction->target2initiator_buffer_size))) {
-            serial_dprintf("SPLIT: receiving buffer failed\n");
-            return false;
-        }
-    }
 #endif
+            serial_dprintf("SPLIT: receiving buffer failed\n");
+            return false;
+        }
+    }
 
     return true;
 }

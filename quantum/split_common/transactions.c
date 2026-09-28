@@ -73,10 +73,18 @@
 
 #define sizeof_member(type, member) sizeof(((type *)NULL)->member)
 
-#define trans_initiator2target_initializer_cb(member, cb) {sizeof_member(split_shared_memory_t, member), offsetof(split_shared_memory_t, member), 0, 0, cb}
+// With the frame CRC, a member larger than the protocol's staging buffer
+// fails the build here rather than every transaction at runtime.
+#ifdef SPLIT_TRANSPORT_CRC
+#    define trans_frame_size(member) (sizeof_member(split_shared_memory_t, member) + 0 * sizeof(struct { _Static_assert(sizeof_member(split_shared_memory_t, member) <= SPLIT_TRANSPORT_CRC_MAX_FRAME, "split frame exceeds SPLIT_TRANSPORT_CRC_MAX_FRAME"); char unused; }))
+#else
+#    define trans_frame_size(member) sizeof_member(split_shared_memory_t, member)
+#endif
+
+#define trans_initiator2target_initializer_cb(member, cb) {trans_frame_size(member), offsetof(split_shared_memory_t, member), 0, 0, cb}
 #define trans_initiator2target_initializer(member) trans_initiator2target_initializer_cb(member, NULL)
 
-#define trans_target2initiator_initializer_cb(member, cb) {0, 0, sizeof_member(split_shared_memory_t, member), offsetof(split_shared_memory_t, member), cb}
+#define trans_target2initiator_initializer_cb(member, cb) {0, 0, trans_frame_size(member), offsetof(split_shared_memory_t, member), cb}
 #define trans_target2initiator_initializer(member) trans_target2initiator_initializer_cb(member, NULL)
 
 #define trans_initiator2target_cb(cb) {0, 0, 0, 0, cb}
@@ -100,7 +108,10 @@ void slave_rpc_request_callback(uint8_t initiator2target_buffer_size, const void
 #ifdef SPLIT_TRANSPORT_CRC
 // A write the slave reported dropped is resent on the next scan instead of
 // waiting for the forced resend. A successful send clears it; a lost report
-// falls back to the forced resend.
+// falls back to the forced resend. A resend repairs state, not events: syncs
+// that carry one-shot flags, RGBLIGHT's change flags and the haptic play
+// request, resend their current value, as QMK's forced resend does. RPC ids
+// mark a drop reported within the running sequence instead.
 static bool resend_due[NUM_TOTAL_TRANSACTIONS];
 
 void split_transaction_crc_dropped(uint8_t id) {

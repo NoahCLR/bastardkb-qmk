@@ -72,6 +72,12 @@ void split_transaction_diagnostic(uint8_t id, uint8_t request_bytes, uint8_t res
 #    ifdef USE_I2C
 #        error "SPLIT_TRANSPORT_CRC is implemented for the serial transport only"
 #    endif
+// The largest data frame, which sizes the protocol's staging buffer. Every
+// transaction table entry is checked against it at compile time.
+#    ifndef SPLIT_TRANSPORT_CRC_MAX_FRAME
+#        define SPLIT_TRANSPORT_CRC_MAX_FRAME (RPC_M2S_BUFFER_SIZE > RPC_S2M_BUFFER_SIZE ? RPC_M2S_BUFFER_SIZE : RPC_S2M_BUFFER_SIZE)
+#    endif
+_Static_assert(SPLIT_TRANSPORT_CRC_MAX_FRAME >= RPC_M2S_BUFFER_SIZE && SPLIT_TRANSPORT_CRC_MAX_FRAME >= RPC_S2M_BUFFER_SIZE, "SPLIT_TRANSPORT_CRC_MAX_FRAME must hold an RPC buffer");
 // Master: the slave reported that transaction id's last write failed its CRC.
 void split_transaction_crc_dropped(uint8_t id);
 #    ifdef SPLIT_TRANSACTION_DIAGNOSTICS
