@@ -128,6 +128,9 @@ void layer_switch(uint8_t new_layer);
 bool is_tap_record(keyrecord_t *record);
 // Allow a userspace gesture engine to own selected dual-role keycodes.
 bool is_tap_keycode_user(uint16_t keycode, bool default_tap);
+// Let a userspace gesture engine hold a record back after combos and tapping;
+// it must replay the record through process_record to deliver it.
+bool process_record_admit_user(keyrecord_t *record);
 bool is_tap_action(action_t action);
 
 /**

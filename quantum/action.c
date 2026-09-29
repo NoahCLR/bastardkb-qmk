@@ -277,8 +277,17 @@ void process_record_tap_hint(keyrecord_t *record) {
  *
  * FIXME: Needs documentation.
  */
+__attribute__((weak)) bool process_record_admit_user(keyrecord_t *record) {
+    return true;
+}
+
 void process_record(keyrecord_t *record) {
     if (IS_NOEVENT(record->event)) {
+        return;
+    }
+    // A downstream gesture engine may hold a record back and replay it later
+    // through process_record, as the tapping engine does with its own queue.
+    if (!process_record_admit_user(record)) {
         return;
     }
 #ifdef SPECULATIVE_HOLD
