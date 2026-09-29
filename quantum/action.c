@@ -1145,6 +1145,10 @@ void clear_keyboard_but_mods_and_keys(void) {
  *
  * FIXME: Needs documentation.
  */
+__attribute__((weak)) bool is_tap_keycode_user(uint16_t keycode, bool default_tap) {
+    return default_tap;
+}
+
 bool is_tap_record(keyrecord_t *record) {
     if (IS_NOEVENT(record->event)) {
         return false;
@@ -1160,7 +1164,7 @@ bool is_tap_record(keyrecord_t *record) {
 #else
     action_t action = layer_switch_get_action(record->event.key);
 #endif
-    return is_tap_action(action);
+    return is_tap_keycode_user(get_record_keycode(record, false), is_tap_action(action));
 }
 
 /** \brief Utilities for actions. (FIXME: Needs better description)

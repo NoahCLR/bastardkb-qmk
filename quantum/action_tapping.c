@@ -132,6 +132,16 @@ static keyrecord_t waiting_buffer[WAITING_BUFFER_SIZE] = {};
 static uint8_t     waiting_buffer_head                 = 0;
 static uint8_t     waiting_buffer_tail                 = 0;
 
+bool tapping_key_event_pending(uint8_t row, uint8_t col, bool pressed, uint16_t since, uint16_t term) {
+    const keyevent_t *event = &tapping_key.event;
+    if (tapping_key.tap.count == 0 && event->type == KEY_EVENT && event->pressed == pressed && event->key.row == row && event->key.col == col && (uint16_t)(event->time - since) <= term) return true;
+    for (uint8_t i = waiting_buffer_tail; i != waiting_buffer_head; i = (i + 1) % WAITING_BUFFER_SIZE) {
+        event = &waiting_buffer[i].event;
+        if (event->type == KEY_EVENT && event->pressed == pressed && event->key.row == row && event->key.col == col && (uint16_t)(event->time - since) <= term) return true;
+    }
+    return false;
+}
+
 static bool process_tapping(keyrecord_t *record);
 static bool waiting_buffer_enq(keyrecord_t record);
 static void waiting_buffer_clear(void);

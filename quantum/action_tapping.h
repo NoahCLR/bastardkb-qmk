@@ -228,3 +228,6 @@ extern uint16_t g_tapping_term;
 #else
 #    define GET_QUICK_TAP_TERM(keycode, record) (QUICK_TAP_TERM)
 #endif
+
+// Queue introspection for downstream gesture timing; physical records only.
+bool tapping_key_event_pending(uint8_t row, uint8_t col, bool pressed, uint16_t since, uint16_t term);

@@ -126,6 +126,8 @@ void clear_keyboard_but_mods(void);
 void clear_keyboard_but_mods_and_keys(void);
 void layer_switch(uint8_t new_layer);
 bool is_tap_record(keyrecord_t *record);
+// Allow a userspace gesture engine to own selected dual-role keycodes.
+bool is_tap_keycode_user(uint16_t keycode, bool default_tap);
 bool is_tap_action(action_t action);
 
 /**

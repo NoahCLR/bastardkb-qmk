@@ -79,3 +79,6 @@ void combo_enable(void);
 void combo_disable(void);
 void combo_toggle(void);
 bool is_combo_enabled(void);
+
+// Pending physical records only; no state mutation or synthetic combo outputs.
+bool combo_key_event_pending(uint8_t row, uint8_t col, bool pressed, uint16_t since, uint16_t term);

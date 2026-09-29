@@ -93,6 +93,16 @@ typedef struct {
 static uint8_t         key_buffer_size = 0;
 static queued_record_t key_buffer[COMBO_KEY_BUFFER_LENGTH];
 
+// Read-only queue facts for a downstream gesture engine. Resolved combo
+// constituents are no longer KEY_EVENTs and must not reserve a tap sequence.
+bool combo_key_event_pending(uint8_t row, uint8_t col, bool pressed, uint16_t since, uint16_t term) {
+    for (uint8_t i = 0; i < key_buffer_size; i++) {
+        const keyevent_t *event = &key_buffer[i].record.event;
+        if (event->type == KEY_EVENT && event->pressed == pressed && event->key.row == row && event->key.col == col && (uint16_t)(event->time - since) <= term) return true;
+    }
+    return false;
+}
+
 typedef struct {
     uint16_t combo_index;
 } queued_combo_t;
