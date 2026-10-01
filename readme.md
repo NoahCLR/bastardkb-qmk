@@ -31,8 +31,25 @@ stay small and hook-shaped, so syncing with upstream QMK stays cheap.
 | Branch | What it is |
 | --- | --- |
 | `noah-userspace-contracts-dev` | where work lands; the firmware pins a commit on it in its `qmk-pin.json` |
-| `noah-userspace-contracts` | the released line; it moves only when the whole stack is released |
+| `noah-userspace-contracts` | the released line; each firmware release moves it to the commit that release is built with |
 | `main` | an old mirror of upstream; not used |
+
+Changes reach `noah-userspace-contracts-dev` only through pull requests, merged
+as merge commits rather than squashed. A merge keeps the branch's own commits, so
+a commit the firmware pinned while the change was in review is still on the
+trunk afterwards, and an upstream sync keeps QMK's history.
+
+### Syncing with upstream QMK
+
+1. Branch from `noah-userspace-contracts-dev` and merge the upstream release
+   into the branch (a merge, never a rebase), resolving conflicts in favour of
+   keeping the fork's hooks small.
+2. Verify it the way every BK change is verified: through the firmware, whose
+   host suite and pair build run against this branch.
+3. Open its pull request and land it; it lands as a merge commit, so upstream's
+   history stays intact.
+4. The firmware picks it up in its own pull request, which re-pins
+   `qmk-pin.json` to the landed commit (`sh tools/pin-qmk.sh` in the firmware).
 
 ## Building
 
