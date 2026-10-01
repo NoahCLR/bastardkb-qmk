@@ -34,15 +34,16 @@ stay small and hook-shaped, so syncing with upstream QMK stays cheap.
 | `noah-userspace-contracts` | the released line; each firmware release moves it to the commit that release is built with |
 | `main` | an old mirror of upstream; not used |
 
-Changes reach `noah-userspace-contracts-dev` only through pull requests, merged
-as merge commits rather than squashed. A merge keeps the branch's own commits, so
+Changes reach `noah-userspace-contracts-dev` only through pull requests, from
+branches named `<type>/<slug>` (`fix/`, `feat/`, `refactor/`, `docs/`, `chore/`),
+merged as merge commits rather than squashed. A merge keeps the branch's own commits, so
 a commit the firmware pinned while the change was in review is still on the
 trunk afterwards, and an upstream sync keeps QMK's history.
 
 ### Syncing with upstream QMK
 
-1. Branch from `noah-userspace-contracts-dev` and merge the upstream release
-   into the branch (a merge, never a rebase), resolving conflicts in favour of
+1. Branch `chore/sync-upstream-qmk-<version>` from
+   `noah-userspace-contracts-dev` and merge the upstream release into it (a merge, never a rebase), resolving conflicts in favour of
    keeping the fork's hooks small.
 2. Verify it the way every BK change is verified: through the firmware, whose
    host suite and pair build run against this branch.
