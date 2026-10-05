@@ -3,18 +3,25 @@
 This is Noah's fork of QMK, which the Charybdis 4x6 firmware
 (`NoahCLR/charybdis-4x6`) builds against. QMK's own conventions are in `docs/`.
 
-## Every change follows the vault's rules
+## How a change is made
 
-Every change in this repository, with or without a task from the work queue,
-follows the work-queue vault's `AGENTS.md`
-(`/Users/noah/dev/charybdis/charybdis-notes/AGENTS.md`), section **Branches,
-landing and pushing**. Read it before your first change in a session. It covers
-your own worktree and its `<type>/<slug>` branch (rename a branch the harness
-made), `verify`, a draft pull request with `open-pr` linked to the thread (for
-firmware and BK, with the pair to try), landing only on Noah's "land it" with
-`land`, `release` as the only way `main` moves, and saying what each of Noah's
-commands will do before asking for it. The tools enforce part of it; the rest
-is yours to follow. This file still governs the code itself.
+Only Noah works on this repository. His private notes vault, `charybdis-notes`,
+sits beside this repository's main checkout (from any worktree:
+`"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/../charybdis-notes"`). It holds the work queue and the tools every change goes through.
+If it is there, read its `AGENTS.md` before your first change in a session:
+**Every agent, wherever it starts** (work starts from a note or right here,
+and Noah's commands have skills) and **Branches, landing and pushing** (your
+own worktree on a `<type>/<slug>` branch from `noah-userspace-contracts-dev`, `verify`, a draft pull
+request with `open-pr` linked to the thread (with the firmware pair to try), landing only on Noah's
+"land it" with `land`, `release` as the only way the released line moves, and saying
+what each of Noah's commands will do before asking for it). The tools enforce
+part of it; the rest is yours to follow. This file still governs the code
+itself.
+
+Without the vault: branch from `noah-userspace-contracts-dev` as `<type>/<slug>`, run the checks this
+file lists, and open a pull request into `noah-userspace-contracts-dev` on `NoahCLR/bastardkb-qmk`. Never
+push `noah-userspace-contracts-dev` or the released line directly, and nothing goes upstream. Noah lands
+and releases.
 
 ## This repository
 
