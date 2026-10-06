@@ -14,7 +14,7 @@ it with [Charybdis Ark](https://github.com/NoahCLR/charybdis-ark).
   stopped at QMK 0.29. This fork carries the RP2040 board definition on QMK
   0.32, with the PMW3360 trackball, hi-res dragscroll and the RP2040
   double-tap bootloader. The other BastardKB boards are removed.
-- **A few small hooks the firmware uses**:
+- **A few small hooks and platform improvements**:
   - the auto-mouse elapsed time, for the lighting that fades as the pointer
     layer is about to drop;
   - split activity hooks, so the halves share activity without flooding the

@@ -198,4 +198,8 @@ Receive multiple bytes from the selected SPI device.
 
 ### `void spi_stop(void)` {#api-spi-stop}
 
-End the current SPI transaction. This will deassert the slave select pin and reset the endianness, mode and divisor configured by `spi_start()`.
+End the current SPI transaction and deassert the slave select pin. Normally
+this also stops the controller. With `SPI_KEEP_DRIVER_READY=1`, the RP2040
+controller stays ready; the next `spi_start()` still applies its requested
+configuration. See [RP2040 controller lifetime](#rp2040-controller-lifetime)
+for resource release on suspend.
