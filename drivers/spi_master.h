@@ -104,10 +104,24 @@ spi_status_t spi_transmit(const uint8_t *data, uint16_t length);
 spi_status_t spi_receive(uint8_t *data, uint16_t length);
 
 /**
- * \brief End the current SPI transaction. This will deassert the slave select pin and reset the endianness, mode and divisor configured by `spi_start()`.
+ * \brief End the current SPI transaction and deassert the slave select pin.
+ * Normally this also stops the controller. SPI_KEEP_DRIVER_READY retains it;
+ * the next spi_start() still applies the requested endianness, mode and divisor.
  *
  */
 void spi_stop(void);
+
+#if defined(SPI_KEEP_DRIVER_READY) && SPI_KEEP_DRIVER_READY
+/**
+ * \brief Release an idle RP2040 SPI controller and its DMA channels.
+ *
+ * With SPI_KEEP_DRIVER_READY, spi_stop() still ends the transaction and
+ * releases the bus, but retains the HAL driver in READY. Call this between
+ * transactions for power down; the next spi_start() restarts the controller.
+ * Must be called outside a transaction. ChibiOS calls this on USB suspend.
+ */
+void spi_power_down(void);
+#endif
 
 #ifdef __cplusplus
 }

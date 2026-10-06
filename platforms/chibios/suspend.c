@@ -13,12 +13,19 @@
 #include "led.h"
 #include "wait.h"
 
+#if defined(SPI_KEEP_DRIVER_READY) && SPI_KEEP_DRIVER_READY
+#    include "spi_master.h"
+#endif
+
 /** \brief suspend power down
  *
  * FIXME: needs doc
  */
 void suspend_power_down(void) {
     suspend_power_down_quantum();
+#if defined(SPI_KEEP_DRIVER_READY) && SPI_KEEP_DRIVER_READY
+    spi_power_down();
+#endif
     // on AVR, this enables the watchdog for 15ms (max), and goes to
     // SLEEP_MODE_PWR_DOWN
 

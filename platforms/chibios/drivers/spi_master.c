@@ -19,6 +19,10 @@
 #include <ch.h>
 #include <hal.h>
 
+#if defined(SPI_KEEP_DRIVER_READY) && SPI_KEEP_DRIVER_READY && !defined(MCU_RP)
+#    error "SPI_KEEP_DRIVER_READY is supported only on RP2040"
+#endif
+
 #ifndef SPI_DRIVER
 #    define SPI_DRIVER SPID2
 #endif
@@ -461,9 +465,18 @@ spi_status_t spi_receive(uint8_t *data, uint16_t length) {
 }
 
 void spi_stop(void) {
+#if defined(SPI_KEEP_DRIVER_READY) && SPI_KEEP_DRIVER_READY
+    // No transaction means there is no bus acquisition to release. The HAL
+    // driver may still be READY from a completed transaction.
+    if (!spiStarted) {
+        return;
+    }
+#endif
     if (spiStarted) {
         spi_unselect();
+#if !defined(SPI_KEEP_DRIVER_READY) || !SPI_KEEP_DRIVER_READY
         spiStop(&SPI_DRIVER);
+#endif
         spiStarted = false;
     }
 
@@ -471,3 +484,17 @@ void spi_stop(void) {
     spiReleaseBus(&SPI_DRIVER);
 #endif // (SPI_USE_MUTUAL_EXCLUSION == TRUE)
 }
+
+#if defined(SPI_KEEP_DRIVER_READY) && SPI_KEEP_DRIVER_READY
+void spi_power_down(void) {
+#    if (SPI_USE_MUTUAL_EXCLUSION == TRUE)
+    spiAcquireBus(&SPI_DRIVER);
+#    endif
+    // Called between transactions; acquiring the bus also waits for any
+    // other client's transaction before releasing the retained resources.
+    spiStop(&SPI_DRIVER);
+#    if (SPI_USE_MUTUAL_EXCLUSION == TRUE)
+    spiReleaseBus(&SPI_DRIVER);
+#    endif
+}
+#endif

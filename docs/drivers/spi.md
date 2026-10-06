@@ -73,6 +73,35 @@ If a complete SPI interface is not required, then the following can be done to d
 
 ## API {#api}
 
+### RP2040 controller lifetime
+
+This fork supports `SPI_KEEP_DRIVER_READY=1` on ChibiOS/RP2040. The Charybdis
+4x6 enables it when pointing is enabled; define it as `0` to use the usual
+stop-after-each-transaction behavior. Other boards do not opt in automatically.
+
+With this option, `spi_stop()` still deasserts chip select, clears the active
+transaction and releases the bus mutex when enabled. It leaves the HAL driver
+in `SPI_READY`, retaining its two DMA channels and the enabled SPI peripheral
+between polls. Every `spi_start()` still calls ChibiOS `spiStart()` to apply the
+current device's configuration. The RP2040 HAL reconfigures a READY controller
+without allocating DMA channels or taking the peripheral out of reset again.
+No configuration cache or change to sensor transfer timing is involved.
+
+ChibiOS USB suspend calls `spi_power_down()` after the normal suspend hooks to
+stop the idle controller and release its DMA channels. The next transaction
+starts it normally; repeated suspend calls and suspend before first use are
+safe. Call `spi_power_down()` only outside an active transaction. MCU reset
+starts from the usual cold initialization. Transfers remain synchronous, and
+the option does not add timeout/error recovery to the underlying HAL.
+
+`sh tests/spi_master_lifetime/run.sh` compiles the production driver and suspend
+entry against a HAL spy, with retention on/off, both supported chip-select
+modes, and mutual exclusion on/off. It covers transaction/configuration
+boundaries, invalid starts, resource lifetime and suspend/restart. It does not
+measure hardware timing, DMA availability under other clients, or power draw.
+Validate motion, CPI changes, sleep/wake and sustained typing on the physical
+pair before accepting a performance improvement.
+
 ### `void spi_init(void)` {#api-spi-init}
 
 Initialize the SPI driver. This function must be called only once, before any of the below functions can be called.

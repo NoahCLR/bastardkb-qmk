@@ -20,7 +20,9 @@ it with [Charybdis Ark](https://github.com/NoahCLR/charybdis-ark).
   - split activity hooks, so the halves share activity without flooding the
     link;
   - a CRC on every split serial frame, so a garbled message is refused;
-  - the physical event queues and a record admission hook, for gesture timing.
+  - the physical event queues and a record admission hook, for gesture timing;
+  - retained SPI controller resources between trackball polls on the RP2040
+    Charybdis, released on USB suspend (see [SPI configuration](docs/drivers/spi.md)).
 
 Everything else, the firmware's own policy included, lives in the
 [firmware repo](https://github.com/NoahCLR/charybdis-4x6). The patches here

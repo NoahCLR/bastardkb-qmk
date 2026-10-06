@@ -39,6 +39,14 @@
 #define SPI_MOSI_PIN GP23
 #define POINTING_DEVICE_CS_PIN GP16
 
+// Keep the sensor controller/DMA ready between polls. Transactions still
+// release chip select and the bus; USB suspend releases the retained driver.
+#ifdef POINTING_DEVICE_ENABLE
+#    ifndef SPI_KEEP_DRIVER_READY
+#        define SPI_KEEP_DRIVER_READY 1
+#    endif
+#endif
+
 /* Reset. */
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_LED GP17
