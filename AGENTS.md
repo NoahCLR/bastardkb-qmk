@@ -34,6 +34,12 @@ and releases.
 - **Pull requests merge as merge commits**, never squashed, so a commit the
   firmware pins stays valid and an upstream sync keeps QMK's history (`land`
   does this).
+- **Audit the fork before verification.** Run `python3 util/check_noah_fork.py`
+  and `python3 -m unittest discover -s util -p test_noah_fork.py`. The
+  inventory must explain every upstream difference; runtime and board patch
+  fingerprints require explicit review when changed. Never refresh them just
+  to silence a failure. For upstream syncs, also run the named behavioral tests
+  with `--firmware PATH --run-tests` (see `docs/noah-fork-contracts.md`).
 - **Verify through the firmware.** The vault's `verify` runs the firmware's
   host suite and builds the flashable pair against your branch; BK has no CI of
   its own (GitHub Actions stay off, so QMK's upstream workflows never run).

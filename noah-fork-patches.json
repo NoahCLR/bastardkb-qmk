@@ -1,0 +1,115 @@
+{
+  "format": 1,
+  "upstream_version": "0.34.6",
+  "upstream_commit": "d9f6dd215f2c4d295c6ad85b1f602125c2d81db1",
+  "excluded_keyboard_policy": "unlisted-deletions-only",
+  "patches": [
+    {
+      "id": "charybdis-board",
+      "kind": "board",
+      "purpose": "RP2040 4x6 pins, matrix, bootloader, RGB mapping, PMW3360 and high-resolution drag-scroll.",
+      "files": [
+        "keyboards/bastardkb/charybdis/4x6/config.h",
+        "keyboards/bastardkb/charybdis/4x6/keyboard.json",
+        "keyboards/bastardkb/charybdis/4x6/keymaps/default/keymap.c",
+        "keyboards/bastardkb/charybdis/4x6/mcuconf.h",
+        "keyboards/bastardkb/charybdis/4x6/rules.mk",
+        "keyboards/bastardkb/charybdis/charybdis.c",
+        "keyboards/bastardkb/charybdis/charybdis.h",
+        "keyboards/bastardkb/charybdis/config.h",
+        "keyboards/bastardkb/charybdis/info.json",
+        "keyboards/bastardkb/charybdis/post_config.h",
+        "keyboards/bastardkb/charybdis/readme.md",
+        "keyboards/bastardkb/info.json"
+      ],
+      "firmware_tests": [
+        "tests/host/run_qmk_physical_half_tests.sh",
+        "tests/host/run_runtime_init_order_tests.sh",
+        "tests/host/run_feature_gate_compile_tests.sh"
+      ],
+      "patch_sha256": "1c4902902a8c7e7186a3c0086ba4c36c3e8bb3811ee01ab731651e2db5a8b2b3"
+    },
+    {
+      "id": "auto-mouse-clock",
+      "kind": "runtime",
+      "purpose": "Expose sampled, wrap-safe auto-mouse elapsed time for downstream lighting.",
+      "files": [
+        "quantum/pointing_device/pointing_device_auto_mouse.c",
+        "quantum/pointing_device/pointing_device_auto_mouse.h"
+      ],
+      "firmware_tests": [
+        "tests/host/run_qmk_contract_checks.sh"
+      ],
+      "patch_sha256": "0449a717838272f2eb62a4aed42fc1d5a0ec52a5902c6e3f47f460e6dd00edb7"
+    },
+    {
+      "id": "split-transport",
+      "kind": "runtime",
+      "purpose": "Preserve activity admission, timing diagnostics, CRC frames, mixed-pair rejection, dropped-write repair and checked RPC sequencing.",
+      "files": [
+        "platforms/chibios/drivers/serial_protocol.c",
+        "quantum/split_common/transactions.c",
+        "quantum/split_common/transactions.h"
+      ],
+      "firmware_tests": [
+        "tests/host/run_split_transport_build_tests.sh",
+        "tests/host/run_split_activity_tests.sh",
+        "tests/host/run_split_frame_crc_tests.sh",
+        "tests/host/run_split_runtime_sync_tests.sh"
+      ],
+      "patch_sha256": "a28e9dd15b8f70ae5445387c6b1c19b2b63c2514f048f24d4f224e03607eb828"
+    },
+    {
+      "id": "gesture-admission",
+      "kind": "runtime",
+      "purpose": "Allow downstream dual-role classification and record deferral before quantum features.",
+      "files": [
+        "quantum/action.c",
+        "quantum/action.h"
+      ],
+      "firmware_tests": [
+        "tests/host/run_qmk_contract_checks.sh",
+        "tests/host/run_qmk_gesture_pipeline_tests.sh"
+      ],
+      "patch_sha256": "a824baef26a213fdd625cb02dbf58f136fd3be2b9b73d20dddd2c927638b1ede"
+    },
+    {
+      "id": "physical-gesture-queues",
+      "kind": "runtime",
+      "purpose": "Read pending physical combo/tapping events without mutating queues or counting synthetic outputs.",
+      "files": [
+        "quantum/action_tapping.c",
+        "quantum/action_tapping.h",
+        "quantum/process_keycode/process_combo.c",
+        "quantum/process_keycode/process_combo.h"
+      ],
+      "firmware_tests": [
+        "tests/host/run_qmk_contract_checks.sh",
+        "tests/host/run_qmk_gesture_pipeline_tests.sh",
+        "tests/host/run_qmk_combo_origin_tests.sh"
+      ],
+      "patch_sha256": "5d6e8d0c8606e9cb7607d12dc86b572a85cb21a4d6210392e413c94c5975a786"
+    },
+    {
+      "id": "repository-maintenance",
+      "kind": "maintenance",
+      "purpose": "Explicit fork documentation, workspace settings, audit tooling and imported whitespace cleanup; reviewed normally without recursive self-fingerprints.",
+      "files": [
+        ".gitignore",
+        ".vscode/settings.json",
+        "AGENTS.md",
+        "readme.md",
+        "docs/noah-fork-contracts.md",
+        "docs/feature_layers.md",
+        "docs/features/led_matrix.md",
+        "docs/features/rgb_matrix.md",
+        "tests/tap_hold_configurations/speculative_hold/speculative_hold_flow_term/test.mk",
+        "tests/tap_hold_configurations/speculative_hold/speculative_hold_one_key/test.mk",
+        "noah-fork-patches.json",
+        "util/check_noah_fork.py",
+        "util/test_noah_fork.py"
+      ],
+      "firmware_tests": []
+    }
+  ]
+}

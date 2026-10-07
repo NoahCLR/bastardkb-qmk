@@ -12,7 +12,7 @@ it with [Charybdis Ark](https://github.com/NoahCLR/charybdis-ark).
 - **The RP2040 Charybdis 4x6.** Upstream QMK only has the Elite-C and
   Blackpill versions, and [BastardKB's fork](https://github.com/Bastardkb/bastardkb-qmk)
   stopped at QMK 0.29. This fork carries the RP2040 board definition on QMK
-  0.32, with the PMW3360 trackball, hi-res dragscroll and the RP2040
+  0.34.6, with the PMW3360 trackball, hi-res dragscroll and the RP2040
   double-tap bootloader. The other BastardKB boards are removed.
 - **A few small hooks the firmware uses**:
   - the auto-mouse elapsed time, for the lighting that fades as the pointer
@@ -42,10 +42,14 @@ trunk afterwards, and an upstream sync keeps QMK's history.
 
 ### Syncing with upstream QMK
 
+The [fork contracts](docs/noah-fork-contracts.md) list the patches and downstream
+checks every update must retain, plus client compatibility considerations.
+
 1. Branch `chore/sync-upstream-qmk-<version>` from
    `noah-userspace-contracts-dev` and merge the upstream release into it (a merge, never a rebase), resolving conflicts in favour of
    keeping the fork's hooks small.
-2. Verify it the way every BK change is verified: through the firmware, whose
+2. Run `python3 util/check_noah_fork.py` and the audit checks described in
+   the fork contracts. Then verify it the way every BK change is verified: through the firmware, whose
    host suite and pair build run against this branch.
 3. Open its pull request and land it; it lands as a merge commit, so upstream's
    history stays intact.
