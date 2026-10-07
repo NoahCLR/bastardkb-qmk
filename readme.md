@@ -48,7 +48,8 @@ checks every update must retain, plus client compatibility considerations.
 1. Branch `chore/sync-upstream-qmk-<version>` from
    `noah-userspace-contracts-dev` and merge the upstream release into it (a merge, never a rebase), resolving conflicts in favour of
    keeping the fork's hooks small.
-2. Verify it the way every BK change is verified: through the firmware, whose
+2. Run `python3 util/check_noah_fork.py` and the audit checks described in
+   the fork contracts. Then verify it the way every BK change is verified: through the firmware, whose
    host suite and pair build run against this branch.
 3. Open its pull request and land it; it lands as a merge commit, so upstream's
    history stays intact.

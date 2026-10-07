@@ -75,3 +75,62 @@ Host tests and compilation do not establish hardware polling rate, interruption
 recovery or client acceptance. The trial pair must be tested before those are
 claimed. A later landing adopts the published BK commit through a separate
 firmware pin pull request; this branch alone does not change released firmware.
+
+## Machine-checkable patch inventory
+
+`noah-fork-patches.json` gives each patch a purpose, exact file list and
+firmware regression runners. Its upstream commit is the comparison anchor;
+that commit must exist locally and be an ancestor of HEAD. The checker
+includes committed, staged and unstaged tracked changes plus nonignored
+untracked paths. Stage new inventoried files before auditing them.
+
+```sh
+python3 util/check_noah_fork.py
+python3 -m unittest discover -s util -p test_noah_fork.py
+python3 util/check_noah_fork.py --firmware /absolute/path/to/charybdis-4x6 --run-tests
+```
+
+Run these before the normal vault `verify`. The audit is a required local
+checkpoint in this repository's agent instructions; it is not injected into
+upstream QMK's build or the shared vault tooling. The final command validates
+that each referenced runner exists, sets `QMK_ROOT` to this worktree and runs
+each runner once. It does not replace the full host suite or flashable pair.
+
+Runtime and board entries fingerprint the reviewed binary-capable Git patch
+against upstream, including file modes and full blob identities. Removing a
+hook, restoring upstream's implementation, changing another part of the same
+file, or losing a board file fails the audit. This is deliberately stricter
+than checking that a function name still appears. It proves the reviewed
+patch is intact, not that its behavior is correct; the host tests provide
+behavioral coverage and hardware acceptance remains separate.
+
+The only bulk exclusion allows deletions of unlisted keyboard files. New or
+restored keyboard files require an explicit entry, even when restored bytes
+match upstream exactly. Retained board files have their own fingerprint.
+Documentation, workspace settings and audit tooling have exact named
+maintenance entries without fingerprints. That avoids self-referential hashes
+and keeps routine documentation edits independent of runtime review; these
+files still require ordinary review and checker tests.
+
+### Reviewing an intentional patch change
+
+The audit prints the actual SHA-256 for every runtime/board entry, exits with
+failure on a mismatch, and never writes the manifest or source. Inspect the
+whole patch before changing a fingerprint:
+
+```sh
+python3 util/check_noah_fork.py --show-patch gesture-admission
+```
+
+When a patch changes intentionally, review the displayed delta, preserve or
+adapt its behavioral tests, and copy the reviewed fingerprint into the
+manifest in the same commit. New source differences require exact file
+ownership and a purpose. Do not add a wildcard exclusion to make a check pass.
+When upstream incorporates a patch, explicitly retire/adapt its inventory
+entry and retain behavioral coverage as needed; do not silently drop it.
+
+After merging a newer upstream release, update the manifest's comparison
+anchor and review every changed fingerprint. Blob identities can change even
+when our own hunk is unchanged: upstream edited the surrounding file, which
+requires compatibility review. The report separates those runtime deltas from
+the large count of intentionally excluded keyboards.
