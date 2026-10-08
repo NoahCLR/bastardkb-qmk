@@ -1160,6 +1160,12 @@ __attribute__((weak)) bool is_tap_keycode_user(uint16_t keycode, bool default_ta
     return default_tap;
 }
 
+__attribute__((weak)) bool is_tap_record_user(keyrecord_t *record, bool native_tap, bool default_tap) {
+    (void)record;
+    (void)native_tap;
+    return default_tap;
+}
+
 bool is_tap_record(keyrecord_t *record) {
     if (IS_NOEVENT(record->event)) {
         return false;
@@ -1175,7 +1181,7 @@ bool is_tap_record(keyrecord_t *record) {
 #else
     action_t action = layer_switch_get_action(record->event.key);
 #endif
-    return is_tap_keycode_user(get_record_keycode(record, false), is_tap_action(action));
+    return is_tap_record_user(record, is_tap_action(action), is_tap_keycode_user(get_record_keycode(record, false), is_tap_action(action)));
 }
 
 /** \brief Utilities for actions. (FIXME: Needs better description)

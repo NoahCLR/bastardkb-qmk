@@ -62,7 +62,7 @@
     {
       "id": "gesture-admission",
       "kind": "runtime",
-      "purpose": "Allow downstream dual-role classification and record deferral before quantum features.",
+      "purpose": "Allow downstream dual-role classification, by keycode or by record, and record deferral before quantum features.",
       "files": [
         "quantum/action.c",
         "quantum/action.h"
@@ -71,7 +71,7 @@
         "tests/host/run_qmk_contract_checks.sh",
         "tests/host/run_qmk_gesture_pipeline_tests.sh"
       ],
-      "patch_sha256": "a824baef26a213fdd625cb02dbf58f136fd3be2b9b73d20dddd2c927638b1ede"
+      "patch_sha256": "a52e47058ccd33dadd635229540a91e996c6407d4c1f58dfb38239de518cfd00"
     },
     {
       "id": "physical-gesture-queues",

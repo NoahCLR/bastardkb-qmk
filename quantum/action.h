@@ -128,6 +128,10 @@ void layer_switch(uint8_t new_layer);
 bool is_tap_record(keyrecord_t *record);
 // Allow a userspace gesture engine to own selected dual-role keycodes.
 bool is_tap_keycode_user(uint16_t keycode, bool default_tap);
+// The final say with the record, for an engine whose ownership depends on
+// where the key was pressed: native_tap is QMK's own answer, default_tap
+// is_tap_keycode_user's. Defaults to default_tap.
+bool is_tap_record_user(keyrecord_t *record, bool native_tap, bool default_tap);
 // Let a userspace gesture engine hold a record back after combos and tapping;
 // it must replay the record through process_record to deliver it.
 bool process_record_admit_user(keyrecord_t *record);

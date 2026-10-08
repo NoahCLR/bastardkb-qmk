@@ -24,7 +24,9 @@ retained board tree separately rather than accepting inferred renames.
   staging, dropped-write repair, and checked RPC sequence admission. Corrupt
   frames cannot publish shared data or execute stale requests.
 - `quantum/action.{c,h}`: `is_tap_keycode_user` lets downstream classify its
-  dual-role keys; `process_record_admit_user` runs before quantum processing
+  dual-role keys, and `is_tap_record_user` has the final say with the record,
+  QMK's own answer and the keycode hook's (its default keeps the keycode
+  hook's), for ownership that depends on where a key was pressed; `process_record_admit_user` runs before quantum processing
   and lets downstream defer/replay records.
 - `quantum/action_tapping.{c,h}` and
   `quantum/process_keycode/process_combo.{c,h}`: read-only physical-event
