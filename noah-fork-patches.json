@@ -62,7 +62,7 @@
     {
       "id": "gesture-admission",
       "kind": "runtime",
-      "purpose": "Allow downstream dual-role classification and record deferral before quantum features.",
+      "purpose": "Downstream dual-role classification and record deferral; optional opaque press context preserved by record copies.",
       "files": [
         "quantum/action.c",
         "quantum/action.h"
@@ -71,12 +71,12 @@
         "tests/host/run_qmk_contract_checks.sh",
         "tests/host/run_qmk_gesture_pipeline_tests.sh"
       ],
-      "patch_sha256": "a824baef26a213fdd625cb02dbf58f136fd3be2b9b73d20dddd2c927638b1ede"
+      "patch_sha256": "168948dc60d81f6cbd2026652dd2023b89f0618f3cfa1cdbe1537b60fe41f659"
     },
     {
       "id": "physical-gesture-queues",
       "kind": "runtime",
-      "purpose": "Read pending physical combo/tapping events without mutating queues or counting synthetic outputs.",
+      "purpose": "Read pending physical events; preserve opaque tapping-release context and gate combo member records before any state mutation.",
       "files": [
         "quantum/action_tapping.c",
         "quantum/action_tapping.h",
@@ -88,7 +88,7 @@
         "tests/host/run_qmk_gesture_pipeline_tests.sh",
         "tests/host/run_qmk_combo_origin_tests.sh"
       ],
-      "patch_sha256": "5d6e8d0c8606e9cb7607d12dc86b572a85cb21a4d6210392e413c94c5975a786"
+      "patch_sha256": "eae6e4ba6c97147b0115ac1cace867e351a1bf43e7ce9041c964c2cafb33caac"
     },
     {
       "id": "repository-maintenance",

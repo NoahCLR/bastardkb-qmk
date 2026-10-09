@@ -527,6 +527,9 @@ bool process_tapping(keyrecord_t *keyp) {
                         ac_dprintf("Tapping: Start new tap with releasing last tap(>1).\n");
                         // unregister key
                         process_record(&(keyrecord_t){
+#    ifdef KEYRECORD_USER_DATA
+                            .user_data     = tapping_key.user_data,
+#    endif
                             .tap           = tapping_key.tap,
                             .event.key     = tapping_key.event.key,
                             .event.time    = event.time,
@@ -578,6 +581,9 @@ bool process_tapping(keyrecord_t *keyp) {
                         ac_dprintf("Tapping: Start new tap with releasing last timeout tap(>1).\n");
                         // unregister key
                         process_record(&(keyrecord_t){
+#    ifdef KEYRECORD_USER_DATA
+                            .user_data     = tapping_key.user_data,
+#    endif
                             .tap           = tapping_key.tap,
                             .event.key     = tapping_key.event.key,
                             .event.time    = event.time,

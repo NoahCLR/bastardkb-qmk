@@ -24,11 +24,20 @@ retained board tree separately rather than accepting inferred renames.
   staging, dropped-write repair, and checked RPC sequence admission. Corrupt
   frames cannot publish shared data or execute stale requests.
 - `quantum/action.{c,h}`: `is_tap_keycode_user` lets downstream classify its
-  dual-role keys; `process_record_admit_user` runs before quantum processing
-  and lets downstream defer/replay records.
+  dual-role keys, and `is_tap_record_user` has the final say with the record,
+  QMK's own answer and the keycode hook's (its default keeps the keycode
+  hook's), for ownership that depends on where a key was pressed; `process_record_admit_user` runs before quantum processing
+  and lets downstream defer/replay records. `KEYRECORD_USER_DATA` adds one
+  optional opaque byte to `keyrecord_t`, copied by all queues and by synthesized
+  tapping releases; its interpretation remains downstream policy.
 - `quantum/action_tapping.{c,h}` and
   `quantum/process_keycode/process_combo.{c,h}`: read-only physical-event
   queue queries preserve gesture timing while records wait inside QMK.
+  With `COMBO_KEY_RECORD_FILTER`, weak `combo_key_record_allowed` defaults true;
+  a downstream veto skips every member state mutation, on presses and releases.
+  This record gate is distinct from the upstream trigger veto, whose rejected
+  press/release may still update constituent state. Without the feature flag,
+  the upstream path is unchanged.
 
 The 0.34.6 merge removes or replaces none of these contracts. The retained
 keyboard tree, auto-mouse files, serial protocol and split transaction files
