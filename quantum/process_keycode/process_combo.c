@@ -437,6 +437,12 @@ static bool keys_pressed_in_order(uint16_t combo_index, combo_t *combo, uint16_t
 }
 #endif
 
+#ifdef COMBO_KEY_RECORD_FILTER
+__attribute__((weak)) bool combo_key_record_allowed(uint16_t combo_index, combo_t *combo, uint16_t keycode, keyrecord_t *record) {
+    return true;
+}
+#endif
+
 static combo_key_action_t process_single_combo(combo_t *combo, uint16_t keycode, keyrecord_t *record, uint16_t combo_index) {
     uint8_t  key_count = 0;
     uint16_t key_index = -1;
@@ -446,6 +452,14 @@ static combo_key_action_t process_single_combo(combo_t *combo, uint16_t keycode,
     if (-1 == (int16_t)key_index) {
         return COMBO_KEY_NOT_PRESSED;
     }
+
+#ifdef COMBO_KEY_RECORD_FILTER
+    // This is a record gate, not just a trigger veto. In particular an
+    // excluded duplicate must never clear the eligible occurrence's state.
+    if (!combo_key_record_allowed(combo_index, combo, keycode, record)) {
+        return COMBO_KEY_NOT_PRESSED;
+    }
+#endif
 
     bool key_is_part_of_combo = (!COMBO_DISABLED(combo) && is_combo_enabled()
 #if defined(COMBO_MUST_PRESS_IN_ORDER) || defined(COMBO_MUST_PRESS_IN_ORDER_PER_COMBO)

@@ -82,3 +82,9 @@ bool is_combo_enabled(void);
 
 // Pending physical records only; no state mutation or synthetic combo outputs.
 bool combo_key_event_pending(uint8_t row, uint8_t col, bool pressed, uint16_t since, uint16_t term);
+
+#ifdef COMBO_KEY_RECORD_FILTER
+// A false answer skips every state mutation for this member record, including
+// releases and excluded presses. Default true preserves upstream behavior.
+bool combo_key_record_allowed(uint16_t combo_index, combo_t *combo, uint16_t keycode, keyrecord_t *record);
+#endif

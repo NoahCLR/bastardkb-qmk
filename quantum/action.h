@@ -47,6 +47,10 @@ typedef struct {
 /* Key event container for recording */
 typedef struct keyrecord_t {
     keyevent_t event;
+#ifdef KEYRECORD_USER_DATA
+    // Opaque downstream press context: copied with records through queues.
+    uint8_t user_data;
+#endif
 #ifndef NO_ACTION_TAPPING
     tap_t tap;
 #endif
