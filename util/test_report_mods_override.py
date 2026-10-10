@@ -8,6 +8,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def function(source, signature):
+    """Extract one complete C function so the test executes production code."""
     start = source.index(signature)
     brace = source.index('{', start)
     depth = 1
@@ -20,6 +21,7 @@ def function(source, signature):
 
 class ReportOverrideTests(unittest.TestCase):
     def test_passthrough_override_and_restore_in_both_report_modes(self):
+        """Check report overrides preserve modifier ownership and one-shot state."""
         source = (ROOT / 'quantum/action_util.c').read_text()
         functions = '\n'.join(function(source, signature) for signature in [
             'static uint8_t get_mods_for_report(void)', 'void send_6kro_report(void)',
