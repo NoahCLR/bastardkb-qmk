@@ -47,6 +47,8 @@ extern report_keyboard_t *keyboard_report;
 extern report_nkro_t *nkro_report;
 #endif
 
+#define QMK_REPORT_MODS_OVERRIDE 1
+
 // A report-only modifier override, shared by 6KRO and NKRO. When true,
 // skips normal modifier composition/one-shot consumption for this report.
 // The hook must not send reports recursively or mutate modifier ownership.

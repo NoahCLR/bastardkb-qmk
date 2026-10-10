@@ -107,7 +107,8 @@
         "tests/tap_hold_configurations/speculative_hold/speculative_hold_one_key/test.mk",
         "noah-fork-patches.json",
         "util/check_noah_fork.py",
-        "util/test_noah_fork.py"
+        "util/test_noah_fork.py",
+        "util/test_report_mods_override.py"
       ],
       "firmware_tests": []
     },
@@ -122,7 +123,7 @@
       "firmware_tests": [
         "tests/host/run_qmk_contract_checks.sh"
       ],
-      "patch_sha256": "20e135b325891680f89c8d4c443aeeb618a27ab4a4e19148225fc4d0728d1774"
+      "patch_sha256": "9b0ac8aeaca1ac83594d054b2f8af875fb11157d9dcf7f5f29ceabbc32dcd325"
     }
   ]
 }
