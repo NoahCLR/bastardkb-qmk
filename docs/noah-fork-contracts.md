@@ -44,6 +44,17 @@ keyboard tree, auto-mouse files, serial protocol and split transaction files
 are unchanged from the pre-update fork. The custom gesture function bodies
 are also unchanged; upstream tapping/combo changes remain around them.
 
+## Report-only modifier override
+
+`quantum/action_util.{c,h}` exposes weak
+`keyboard_report_mods_override_user(uint8_t *mods)`. Returning false preserves
+upstream behavior. Returning true supplies the exact modifier byte for both
+6KRO and NKRO, before change detection, and skips normal composition and
+one-shot consumption for that report. Stored real, weak, one-shot and
+speculative modifier state is unchanged. Downstream must send a report when
+entering, changing or leaving its override. The hook must not recurse into
+report sending or alter ownership. Host-input policy belongs downstream.
+
 ## Upstream changes relevant to the downstream firmware
 
 - Mouse/wheel report minima now match the HID descriptor (-127/-32767).
