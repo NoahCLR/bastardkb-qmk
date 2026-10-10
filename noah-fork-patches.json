@@ -115,15 +115,18 @@
     {
       "id": "report-modifier-override",
       "kind": "runtime",
-      "purpose": "Optional report-only modifier override for asynchronous downstream input; preserve live modifier and one-shot state.",
+      "purpose": "Optional report-only modifier override and 6KRO/NKRO key filters for downstream output isolation; preserve live ownership and consume one-shot state only for visible keys.",
       "files": [
         "quantum/action_util.c",
         "quantum/action_util.h"
       ],
       "firmware_tests": [
-        "tests/host/run_qmk_contract_checks.sh"
+        "tests/host/run_qmk_contract_checks.sh",
+        "tests/host/run_qmk_report_filter_tests.sh",
+        "tests/host/run_macro_payload_engine_tests.sh",
+        "tests/host/run_macro_output_ownership_tests.sh"
       ],
-      "patch_sha256": "9b0ac8aeaca1ac83594d054b2f8af875fb11157d9dcf7f5f29ceabbc32dcd325"
+      "patch_sha256": "79997a8ba0e3a852528b090fa4a81677527a9c4986f954ecb58b39ad1a7d1bdd"
     }
   ]
 }

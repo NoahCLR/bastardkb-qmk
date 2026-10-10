@@ -274,7 +274,7 @@ __attribute__((weak)) bool keyboard_report_mods_override_user(uint8_t *mods) {
     return false;
 }
 
-static uint8_t get_mods_for_report(void) {
+static uint8_t get_mods_for_report(bool has_keys) {
     uint8_t override_mods = 0;
     if (keyboard_report_mods_override_user(&override_mods)) {
         return override_mods;
@@ -290,7 +290,7 @@ static uint8_t get_mods_for_report(void) {
         }
 #    endif
         mods |= oneshot_mods;
-        if (has_anykey()) {
+        if (has_keys) {
             clear_oneshot_mods();
         }
     }
@@ -309,32 +309,50 @@ static uint8_t get_mods_for_report(void) {
     return mods;
 }
 
+__attribute__((weak)) void keyboard_report_keys_filter_user(report_keyboard_t *report) {
+    (void)report;
+}
+
 void send_6kro_report(void) {
-    keyboard_report->mods = get_mods_for_report();
+    report_keyboard_t outgoing = *keyboard_report;
+    keyboard_report_keys_filter_user(&outgoing);
+    bool has_keys = false;
+    for (uint8_t i = 0; i < KEYBOARD_REPORT_KEYS; i++)
+        has_keys |= outgoing.keys[i] != 0;
+    keyboard_report->mods = outgoing.mods = get_mods_for_report(has_keys);
 
 #ifdef PROTOCOL_VUSB
-    host_keyboard_send(keyboard_report);
+    host_keyboard_send(&outgoing);
 #else
     static report_keyboard_t last_report;
 
     /* Only send the report if there are changes to propagate to the host. */
-    if (memcmp(keyboard_report, &last_report, sizeof(report_keyboard_t)) != 0) {
-        memcpy(&last_report, keyboard_report, sizeof(report_keyboard_t));
-        host_keyboard_send(keyboard_report);
+    if (memcmp(&outgoing, &last_report, sizeof(report_keyboard_t)) != 0) {
+        last_report = outgoing;
+        host_keyboard_send(&outgoing);
     }
 #endif
 }
 
 #ifdef NKRO_ENABLE
+__attribute__((weak)) void nkro_report_keys_filter_user(report_nkro_t *report) {
+    (void)report;
+}
+
 void send_nkro_report(void) {
-    nkro_report->mods = get_mods_for_report();
+    report_nkro_t outgoing = *nkro_report;
+    nkro_report_keys_filter_user(&outgoing);
+    bool has_keys = false;
+    for (uint8_t i = 0; i < NKRO_REPORT_BITS; i++)
+        has_keys |= outgoing.bits[i] != 0;
+    nkro_report->mods = outgoing.mods = get_mods_for_report(has_keys);
 
     static report_nkro_t last_report;
 
     /* Only send the report if there are changes to propagate to the host. */
-    if (memcmp(nkro_report, &last_report, sizeof(report_nkro_t)) != 0) {
-        memcpy(&last_report, nkro_report, sizeof(report_nkro_t));
-        host_nkro_send(nkro_report);
+    if (memcmp(&outgoing, &last_report, sizeof(report_nkro_t)) != 0) {
+        last_report = outgoing;
+        host_nkro_send(&outgoing);
     }
 }
 #endif
