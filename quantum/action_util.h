@@ -48,6 +48,14 @@ extern report_nkro_t *nkro_report;
 #endif
 
 #define QMK_REPORT_MODS_OVERRIDE 1
+#define QMK_REPORT_KEYS_FILTER 1
+
+// Filter keys in a disposable outgoing report, before modifier composition
+// and change detection. Never mutate live ownership or send recursively.
+void keyboard_report_keys_filter_user(report_keyboard_t *report);
+#ifdef NKRO_ENABLE
+void nkro_report_keys_filter_user(report_nkro_t *report);
+#endif
 
 // A report-only modifier override, shared by 6KRO and NKRO. When true,
 // skips normal modifier composition/one-shot consumption for this report.

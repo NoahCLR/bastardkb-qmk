@@ -55,6 +55,18 @@ speculative modifier state is unchanged. Downstream must send a report when
 entering, changing or leaving its override. The hook must not recurse into
 report sending or alter ownership. Host-input policy belongs downstream.
 
+## Report-only key filtering
+
+`QMK_REPORT_KEYS_FILTER` advertises `keyboard_report_keys_filter_user` and,
+with NKRO enabled, `nkro_report_keys_filter_user`. The weak defaults do nothing.
+Each hook receives a disposable copy of the outgoing report; it may replace or
+filter its key fields, leaving the live report and ownership unchanged. Modifier
+composition runs afterward, using the filtered keys for one-shot consumption.
+Change detection and host sending use the filtered copy, including on VUSB.
+Hooks must not send recursively or mutate live ownership. Downstream must send
+when its filter changes, including when its own output has a usage already held
+by another owner. Host-input policy remains downstream.
+
 ## Upstream changes relevant to the downstream firmware
 
 - Mouse/wheel report minima now match the HID descriptor (-127/-32767).
