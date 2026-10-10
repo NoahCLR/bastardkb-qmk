@@ -47,6 +47,10 @@ extern report_keyboard_t *keyboard_report;
 extern report_nkro_t *nkro_report;
 #endif
 
+// A report-only modifier override, shared by 6KRO and NKRO. When true,
+// skips normal modifier composition/one-shot consumption for this report.
+// The hook must not send reports recursively or mutate modifier ownership.
+bool keyboard_report_mods_override_user(uint8_t *mods);
 void send_keyboard_report(void);
 
 /* key */

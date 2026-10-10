@@ -110,6 +110,19 @@
         "util/test_noah_fork.py"
       ],
       "firmware_tests": []
+    },
+    {
+      "id": "report-modifier-override",
+      "kind": "runtime",
+      "purpose": "Optional report-only modifier override for asynchronous downstream input; preserve live modifier and one-shot state.",
+      "files": [
+        "quantum/action_util.c",
+        "quantum/action_util.h"
+      ],
+      "firmware_tests": [
+        "tests/host/run_qmk_contract_checks.sh"
+      ],
+      "patch_sha256": "20e135b325891680f89c8d4c443aeeb618a27ab4a4e19148225fc4d0728d1774"
     }
   ]
 }

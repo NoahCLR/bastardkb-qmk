@@ -267,7 +267,18 @@ bool is_oneshot_enabled(void) {
 
 #endif
 
+// Report-only override: stored modifier and one-shot ownership remains live.
+// Return false to preserve QMK's normal modifier policies.
+__attribute__((weak)) bool keyboard_report_mods_override_user(uint8_t *mods) {
+    (void)mods;
+    return false;
+}
+
 static uint8_t get_mods_for_report(void) {
+    uint8_t override_mods = 0;
+    if (keyboard_report_mods_override_user(&override_mods)) {
+        return override_mods;
+    }
     uint8_t mods = real_mods | weak_mods;
 
 #ifndef NO_ACTION_ONESHOT
