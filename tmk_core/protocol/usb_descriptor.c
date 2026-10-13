@@ -1200,6 +1200,16 @@ const USB_Descriptor_String_t PROGMEM ProductString = {
 
 // clang-format on
 
+#ifdef USB_PRODUCT_STRING_USER
+#    if defined(__AVR__)
+#        error A runtime product string is unsupported on AVR as LUFA requires the string to be in PROGMEM.
+#    endif
+
+__attribute__((weak)) const USB_Descriptor_String_t* usb_product_string_user(void) {
+    return NULL;
+}
+#endif // USB_PRODUCT_STRING_USER
+
 #if defined(SERIAL_NUMBER)
 // clang-format off
 const USB_Descriptor_String_t PROGMEM SerialNumberString = {
@@ -1293,6 +1303,14 @@ uint16_t get_usb_descriptor(const uint16_t wValue, const uint16_t wIndex, const 
 
                     break;
                 case 0x02:
+#ifdef USB_PRODUCT_STRING_USER
+                    Address = usb_product_string_user();
+                    if (Address != NULL) {
+                        Size = ((const USB_Descriptor_String_t*)Address)->Header.Size;
+
+                        break;
+                    }
+#endif
                     Address = &ProductString;
                     Size    = pgm_read_byte(&ProductString.Header.Size);
 

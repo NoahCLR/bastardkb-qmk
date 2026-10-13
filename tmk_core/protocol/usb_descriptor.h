@@ -311,3 +311,11 @@ enum usb_endpoints {
 #define DIGITIZER_EPSIZE 8
 
 uint16_t get_usb_descriptor(const uint16_t wValue, const uint16_t wIndex, const uint16_t wLength, const void** const DescriptorAddress);
+
+#ifdef USB_PRODUCT_STRING_USER
+// A product string supplied at runtime; NULL keeps PRODUCT. A returned
+// descriptor must stay valid and unchanged while the host may read it: to
+// change the name, return another complete descriptor, never edit one in place.
+// Hosts read it when enumerating, so a new name shows after USB reconnects.
+const USB_Descriptor_String_t* usb_product_string_user(void);
+#endif
