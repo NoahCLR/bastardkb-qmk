@@ -67,6 +67,18 @@ Hooks must not send recursively or mutate live ownership. Downstream must send
 when its filter changes, including when its own output has a usage already held
 by another owner. Host-input policy remains downstream.
 
+## Runtime product string
+
+With `USB_PRODUCT_STRING_USER`, `tmk_core/protocol/usb_descriptor.{c,h}` ask
+weak `usb_product_string_user()` for the product string descriptor (index 2).
+Its default returns NULL, which keeps `PRODUCT` from `keyboard_name`; without
+the feature flag the upstream path is unchanged. A returned descriptor is a
+complete UTF-16LE string descriptor that stays valid and unchanged while the
+host may read it; to rename, return another descriptor. Hosts read the string
+when enumerating, so a new name shows after USB reconnects. AVR is refused at
+compile time (LUFA reads descriptors from PROGMEM). Where the name is stored
+and when to reconnect are downstream policy.
+
 ## Upstream changes relevant to the downstream firmware
 
 - Mouse/wheel report minima now match the HID descriptor (-127/-32767).

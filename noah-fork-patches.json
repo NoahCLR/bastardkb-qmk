@@ -127,6 +127,19 @@
         "tests/host/run_macro_output_ownership_tests.sh"
       ],
       "patch_sha256": "79997a8ba0e3a852528b090fa4a81677527a9c4986f954ecb58b39ad1a7d1bdd"
+    },
+    {
+      "id": "usb-product-string",
+      "kind": "runtime",
+      "purpose": "Optional runtime USB product string so downstream can serve a stored keyboard name.",
+      "files": [
+        "tmk_core/protocol/usb_descriptor.c",
+        "tmk_core/protocol/usb_descriptor.h"
+      ],
+      "firmware_tests": [
+        "tests/host/run_qmk_contract_checks.sh"
+      ],
+      "patch_sha256": "0095433a8b90edb3c3c81ba1dbc02e448f952beac56663102f7272609f63bf96"
     }
   ]
 }
