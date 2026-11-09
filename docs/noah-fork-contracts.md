@@ -38,6 +38,13 @@ retained board tree separately rather than accepting inferred renames.
   This record gate is distinct from the upstream trigger veto, whose rejected
   press/release may still update constituent state. Without the feature flag,
   the upstream path is unchanged.
+  With `COMBO_KEYCODES_DOWNSTREAM`, `process_combo` no longer switches the
+  combo flag for `QK_COMBO_ON`, `QK_COMBO_OFF` and `QK_COMBO_TOGGLE`: their
+  presses still return before combo matching, so they never join a combo, and
+  downstream calls `combo_enable()`, `combo_disable()` or `combo_toggle()`
+  itself. That lets downstream switch combos from records QMK's pre-process
+  never sees (a behaviour's tap, a combo's output) and decide a physical
+  press's tap or hold first. Without the flag the upstream path is unchanged.
 
 The 0.34.6 merge removes or replaces none of these contracts. The retained
 keyboard tree, auto-mouse files, serial protocol and split transaction files

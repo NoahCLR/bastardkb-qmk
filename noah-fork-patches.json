@@ -76,7 +76,7 @@
     {
       "id": "physical-gesture-queues",
       "kind": "runtime",
-      "purpose": "Read pending physical events; preserve opaque tapping-release context and gate combo member records before any state mutation.",
+      "purpose": "Read pending physical events; preserve opaque tapping-release context and gate combo member records before any state mutation; optional downstream ownership of the combo keycodes (COMBO_KEYCODES_DOWNSTREAM).",
       "files": [
         "quantum/action_tapping.c",
         "quantum/action_tapping.h",
@@ -88,7 +88,7 @@
         "tests/host/run_qmk_gesture_pipeline_tests.sh",
         "tests/host/run_qmk_combo_origin_tests.sh"
       ],
-      "patch_sha256": "eae6e4ba6c97147b0115ac1cace867e351a1bf43e7ce9041c964c2cafb33caac"
+      "patch_sha256": "e49fce58c69a8e092102619df13f468823a7175a46da79ce245f2756b5bc47d1"
     },
     {
       "id": "repository-maintenance",
