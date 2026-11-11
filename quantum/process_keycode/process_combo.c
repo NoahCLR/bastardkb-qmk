@@ -583,6 +583,14 @@ static combo_key_action_t process_single_combo(combo_t *combo, uint16_t keycode,
 bool process_combo(uint16_t keycode, keyrecord_t *record) {
     uint8_t is_combo_key = COMBO_KEY_NOT_PRESSED;
 
+#ifdef COMBO_KEYCODES_DOWNSTREAM
+    _Static_assert(QK_COMBO_OFF == QK_COMBO_ON + 1 && QK_COMBO_TOGGLE == QK_COMBO_ON + 2, "the combo keycodes are one range");
+    // Downstream switches the combo flag for these keycodes itself, wherever
+    // it sends them; here they still never join a combo.
+    if (keycode >= QK_COMBO_ON && keycode <= QK_COMBO_TOGGLE && record->event.pressed) {
+        return true;
+    }
+#else
     if (keycode == QK_COMBO_ON && record->event.pressed) {
         combo_enable();
         return true;
@@ -597,6 +605,7 @@ bool process_combo(uint16_t keycode, keyrecord_t *record) {
         combo_toggle();
         return true;
     }
+#endif
 
 #ifdef COMBO_ONLY_FROM_LAYER
     /* Only check keycodes from one layer. */
