@@ -27,7 +27,7 @@
         "tests/host/run_runtime_init_order_tests.sh",
         "tests/host/run_feature_gate_compile_tests.sh"
       ],
-      "patch_sha256": "1c4902902a8c7e7186a3c0086ba4c36c3e8bb3811ee01ab731651e2db5a8b2b3"
+      "patch_sha256": "00bde8b79552b2da8f76682b3f5304942eb37b8aa061f09b969c0c49b4abbf6a"
     },
     {
       "id": "auto-mouse-clock",
